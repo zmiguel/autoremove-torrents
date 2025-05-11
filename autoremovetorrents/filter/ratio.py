@@ -1,19 +1,24 @@
 #-*- coding:utf-8 -*-
 
 from .filter import Filter
+from .. import logger
 
 class RatioFilter(Filter):
     def __init__(self, min_ratio=None, max_ratio=None):
         super(RatioFilter, self).__init__(all_seeds=None, ac=None, re=None)
+        # ADDED: Initialize logger
+        self._logger = logger.Logger.register(__name__)
         # Convert to float, handling None by setting to 0.0 for min and inf for max
         self._min_ratio = float(min_ratio) if min_ratio is not None else 0.0
         self._max_ratio = float(max_ratio) if max_ratio is not None else float('inf')
 
         # It's a good practice to ensure min_ratio is not greater than max_ratio.
         # If min_ratio > max_ratio, it would result in no torrents passing the filter.
-        # Depending on desired behavior, one might log a warning, raise an error, or swap them.
-        # For now, we'll assume valid configuration or that this state (e.g. min=1.0, max=0.5)
-        # correctly means "filter out everything".
+        if self._min_ratio > self._max_ratio:
+            self._logger.warning(
+                f"min_ratio ({self._min_ratio}) is greater than max_ratio ({self._max_ratio}). "
+                f"This will result in no torrents passing this filter."
+            )
 
     def apply(self, torrents):
         # If min_ratio is at its effective minimum (0.0) and max_ratio is at its effective maximum (infinity),
@@ -32,10 +37,10 @@ class RatioFilter(Filter):
                     effective_ratio = float('inf')
                 else:
                     effective_ratio = float(ratio) # Ensure it's a float for comparison
-            # else:
+            else:
                 # For non-numeric ratios, effective_ratio remains 0.0.
-                # A logger could be used here to warn about unexpected ratio values if available.
-                # e.g., self._logger.warning(f"Torrent {getattr(torrent, 'name', 'N/A')} has non-numeric ratio: {ratio}")
+                torrent_name = getattr(torrent, 'name', 'N/A') # Safely get torrent name
+                self._logger.warning(f"Torrent '{torrent_name}' has a non-numeric ratio: {ratio}. Treating as 0.0 for filtering.")
 
             if self._min_ratio <= effective_ratio <= self._max_ratio:
                 filtered_torrents.add(torrent)
