@@ -10,6 +10,7 @@ from .client.deluge import Deluge
 from .exception.nosuchclient import NoSuchClient
 from .strategy import Strategy
 from autoremovetorrents.torrent import Torrent
+from .util.discord_notifier import send_discord_notification
 
 class Task(object):
     def __init__(self, name, conf, remove_torrents = True):
@@ -37,6 +38,7 @@ class Task(object):
         self._enabled_remove = remove_torrents
         self._delete_data = conf['delete_data'] if 'delete_data' in conf else False
         self._strategies = conf['strategies'] if 'strategies' in conf else []
+        self._discord_webhook_url = conf.get('discord_webhook_url')
 
         # Torrents
         self._torrents = set()
@@ -62,6 +64,7 @@ class Task(object):
             self._enabled_remove, self._delete_data
         ))
         self._logger.debug('Strategies: %s' % ', '.join(self._strategies))
+        self._logger.debug(f'Discord Webhook URL: {self._discord_webhook_url if self._discord_webhook_url else "Not configured"}')
 
     # Login client
     def _login(self):
@@ -115,23 +118,30 @@ class Task(object):
     # Remove torrents
     def _remove_torrents(self):
         # Bulid a dict to store torrent hashes and names which to be deleted
-        delete_list = {}
-        for torrent in self._remove:
-            delete_list[torrent.hash] = torrent.name
+        delete_map = {torrent.hash: torrent for torrent in self._remove}
         # Run deletion
-        success, failed = self._client.remove_torrents([hash_ for hash_ in delete_list], self._delete_data)
-        # Output logs
-        for hash_ in success:
-            self._logger.info(
-                'The torrent %s and its data have been removed.' if self._delete_data \
-                else 'The torrent %s has been removed.',
-                delete_list[hash_]
-            )
-        for torrent in failed:
-            self._logger.error('The torrent %s and its data cannot be removed. Reason: %s' if self._delete_data \
-                else 'The torrent %s cannot be removed. Reason: %s',
-                delete_list[torrent['hash']], torrent['reason']
-            )
+        success_hashes, failed_torrents = self._client.remove_torrents(list(delete_map.keys()), self._delete_data)
+        # Output logs and send notifications
+        for hash_ in success_hashes:
+            removed_torrent_obj = delete_map[hash_]
+            removed_torrent_name = removed_torrent_obj.name
+            log_message = (
+                'The torrent %s and its data have been removed.' if self._delete_data
+                else 'The torrent %s has been removed.'
+            ) % removed_torrent_name
+            self._logger.info(log_message)
+            if self._discord_webhook_url:
+                send_discord_notification(self._discord_webhook_url, removed_torrent_obj)
+
+        for failed_item in failed_torrents:
+            failed_torrent_obj = delete_map[failed_item['hash']]
+            failed_torrent_name = failed_torrent_obj.name
+            reason = failed_item['reason']
+            log_message = (
+                'The torrent %s and its data cannot be removed. Reason: %s' if self._delete_data
+                else 'The torrent %s cannot be removed. Reason: %s'
+            ) % (failed_torrent_name, reason)
+            self._logger.error(log_message)
 
     # Execute
     def execute(self):

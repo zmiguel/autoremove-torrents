@@ -684,6 +684,42 @@ Part 4: Delete data
 
 Determine whether to delete data at the same time. If this field isn't specificed, the default value is ``false``.
 
+Part 5: Discord Notifications (Optional)
+----------------------------------------
+
+You can configure ``autoremove-torrents`` to send a notification to a Discord channel whenever a torrent is removed. This is done by providing a Discord webhook URL.
+
+* ``discord_webhook_url``: The full Discord webhook URL for the channel where you want to receive notifications.
+
+When a torrent is removed, a message will be sent to the specified webhook. The notification will be an embed containing the following details about the removed torrent:
+
+*   **Torrent Name**
+*   **Ratio**
+*   **Uploaded**: Total data uploaded for the torrent.
+*   **Total Size**: The total size of the torrent.
+*   **Seeding Time**: How long the torrent was seeding.
+*   **Last Activity**: Time elapsed since the torrent was last active.
+*   **Category**: The category of the torrent.
+*   **Trackers**: A list of tracker hostnames associated with the torrent.
+
+Example with Discord Notification:
+
+.. code-block:: yaml
+
+   my_task_with_discord:
+     client: qbittorrent
+     host: http://127.0.0.1:9091
+     username: admin
+     password: adminadmin
+     discord_webhook_url: "https://discord.com/api/webhooks/your_webhook_id/your_webhook_token" # Replace with your actual webhook URL
+     strategies:
+       my_strategy:
+         categories:
+           - Movies
+         ratio: 1.5 # Remove if ratio > 1.5
+         seeding_time: 604800 # Or if seeding for more than 7 days
+     delete_data: false
+
 The Last Step...
 ----------------
 
