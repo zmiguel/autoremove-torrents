@@ -119,8 +119,18 @@ class Task(object):
     def _remove_torrents(self):
         # Bulid a dict to store torrent hashes and names which to be deleted
         delete_map = {torrent.hash: torrent for torrent in self._remove}
+        torrent_hashes_to_remove = list(delete_map.keys())
+
+        # Perform pre-remove actions if the client supports it
+        if hasattr(self._client, 'pre_remove_actions') and callable(getattr(self._client, 'pre_remove_actions')):
+            try:
+                self._logger.info("Performing pre-remove actions...")
+                self._client.pre_remove_actions(torrent_hashes_to_remove)
+            except Exception as e: # Catch any exception during pre-remove actions
+                self._logger.error(f"Error during pre-remove actions: {e}. Proceeding with removal attempt.")
+
         # Run deletion
-        success_hashes, failed_torrents = self._client.remove_torrents(list(delete_map.keys()), self._delete_data)
+        success_hashes, failed_torrents = self._client.remove_torrents(torrent_hashes_to_remove, self._delete_data)
         # Output logs and send notifications
         for hash_ in success_hashes:
             removed_torrent_obj = delete_map[hash_]

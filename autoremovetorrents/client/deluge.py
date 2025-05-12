@@ -6,12 +6,15 @@ from ..clientstatus import ClientStatus
 from ..torrentstatus import TorrentStatus
 from ..exception.loginfailure import LoginFailure
 from ..exception.remotefailure import RemoteFailure
+from .. import logger # Import the logger
 
 # Default port of Delgue
 DEFAULT_PORT = 58846
 
 class Deluge(object):
     def __init__(self, host):
+        # Logger
+        self._logger = logger.Logger.register(__name__)
         # Host
         self._host = host
         # RPC Client
@@ -158,6 +161,20 @@ class Deluge(object):
     # Get free space
     def remote_free_space(self, path):
         return self._call('core.get_free_space', path)
+
+    # Actions to perform before removing torrents
+    def pre_remove_actions(self, torrent_hash_list):
+        if self._client.deluge_version >= 2:
+            try:
+                # core.force_reannounce expects a list of torrent_ids
+                self._logger.info(f"Attempting to force reannounce for torrents: {torrent_hash_list} before removal.")
+                self._call('core.force_reannounce', torrent_hash_list)
+                self._logger.info(f"Waiting for 5 seconds after reannounce for torrents: {torrent_hash_list}.")
+                time.sleep(5) # Wait for 5 seconds after reannounce
+            except RemoteFailure as e:
+                self._logger.warning(f"Failed to force reannounce for torrents {torrent_hash_list}: {e}. Proceeding with removal.")
+            except Exception as e: # Catch any other unexpected errors
+                self._logger.error(f"An unexpected error occurred during pre-remove actions for {torrent_hash_list}: {e}. Proceeding with removal.")
 
     # Judge Torrent Status
     @staticmethod
