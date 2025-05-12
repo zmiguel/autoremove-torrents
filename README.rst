@@ -6,7 +6,9 @@ This program can help you to remove your torrents. Now you don't need to worry a
 
 This program supports qBittorrent/Transmission/μTorrent. If you like, star it :star2: :)
 
-Documentation: https://autoremove-torrents.readthedocs.io/en/latest/
+Original Documentation: https://autoremove-torrents.readthedocs.io/en/latest/
+
+This fork's Documentation: https://autoremove-torrents-zm.readthedocs.io/en/latest/
 
 Readme version in other languages: `简体中文`_.
 
@@ -57,7 +59,7 @@ Install from GitHub
 
 Write your configuration file
 ++++++++++++++++++++++++++++++
-In order to satisfactory your needs, you have to learn how to write a configuration file. 
+In order to satisfactory your needs, you have to learn how to write a configuration file.
 
 You can put the configuration file anywhere on your disk. The autoremove-torrents looks for ``config.yml`` in the Shell's current working directory::
 
